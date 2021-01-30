@@ -41,24 +41,20 @@ impl RawNamedLock {
 }
 
 unsafe fn flock(fd: RawFd, operation: i32) -> Result<()> {
-    loop {
-        let rc = libc::flock(fd, operation);
+    let rc = libc::flock(fd, operation);
 
-        if rc < 0 {
-            let err = io::Error::last_os_error();
+    if rc < 0 {
+        let err = io::Error::last_os_error();
 
-            if err.kind() == io::ErrorKind::Interrupted {
-                continue;
-            } else if err.kind() == io::ErrorKind::WouldBlock {
-                return Err(Error::WouldBlock);
-            } else if (operation & LOCK_EX) == LOCK_EX {
-                return Err(Error::LockFailed);
-            } else if (operation & LOCK_UN) == LOCK_UN {
-                return Err(Error::UnlockFailed);
-            }
+        if err.kind() == io::ErrorKind::Interrupted {
+            return Err(Error::LockFailed);
+        } else if err.kind() == io::ErrorKind::WouldBlock {
+            return Err(Error::WouldBlock);
+        } else if (operation & LOCK_EX) == LOCK_EX {
+            return Err(Error::LockFailed);
+        } else if (operation & LOCK_UN) == LOCK_UN {
+            return Err(Error::UnlockFailed);
         }
-
-        break;
     }
 
     Ok(())
